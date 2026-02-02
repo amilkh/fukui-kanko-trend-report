@@ -3,7 +3,9 @@ import * as holidayJp from "@holiday-jp/holiday_jp";
 import { groupBy, mutate, sum, summarize, tidy } from "@tidyjs/tidy";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import { DAYS } from "./constants";
+dayjs.extend(isSameOrBefore);
 dayjs.extend(isoWeek);
 
 export const getDateInfo = (dateStr: string, timeUnit: TimeUnit) => {
@@ -12,7 +14,6 @@ export const getDateInfo = (dateStr: string, timeUnit: TimeUnit) => {
 
   if (timeUnit === "month") {
     return {
-      formattedDate: d.format("YYYY-MM"),
       displayText: "",
       color: "#666",
     };
@@ -20,7 +21,6 @@ export const getDateInfo = (dateStr: string, timeUnit: TimeUnit) => {
 
   if (timeUnit === "week") {
     return {
-      formattedDate: d.format("YYYY-MM-DD") + "週",
       displayText: ``,
       color: "#666",
     };
@@ -34,15 +34,14 @@ export const getDateInfo = (dateStr: string, timeUnit: TimeUnit) => {
   const isSaturday = dayOfWeek === "土";
 
   const color = isWeekendOrHoliday ? "red" : isSaturday ? "blue" : "#666";
-  const formattedDate = d.format("YYYY-MM-DD");
 
-  return { formattedDate, displayText, color };
+  return { displayText, color };
 };
 
 export const getChartProps = (
   metric: ChartMetric,
   hoveredKey: string | null,
-  hiddenKeys: Set<string>
+  hiddenKeys: Set<string>,
 ) => {
   const baseProps = {
     dataKey: metric.id,
@@ -77,13 +76,46 @@ export const aggregateData = (data: DataPoint[], unit: TimeUnit) => {
   if (!data || data.length === 0) return [];
 
   if (unit === "day") {
-    return data.map((entry) => ({
-      ...entry,
-      average_rating: entry.average_rating === 0 ? null : entry.average_rating,
-    }));
+    const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
+
+    const start = dayjs(sortedData[0].date);
+    const end = dayjs(sortedData[sortedData.length - 1].date);
+
+    const filledData = [] as DataPoint[];
+    let current = start;
+    let dataIndex = 0;
+
+    while (current.isSameOrBefore(end)) {
+      const dateStr = current.format("YYYY-MM-DD");
+      const entry = sortedData[dataIndex];
+
+      if (entry && entry.date === dateStr) {
+        filledData.push({
+          ...entry,
+          average_rating:
+            entry.average_rating === 0 ? null : entry.average_rating,
+        });
+        dataIndex++;
+      } else {
+        filledData.push({
+          date: dateStr,
+          map_views: 0,
+          search_views: 0,
+          directions: 0,
+          call_clicks: 0,
+          website_clicks: 0,
+          review_count_change: 0,
+          average_rating: null,
+          total_reviews: 0,
+          location_count: 0,
+        });
+      }
+      current = current.add(1, "day");
+    }
+    return filledData;
   }
 
-  const dateFormat = unit === "month" ? "YYYY-MM" : "YYYY-MM-DD";
+  const dateFormat = unit === "month" ? "YYYY-MM" : "YYYY-MM-DD週";
 
   return tidy(
     data,
@@ -110,9 +142,9 @@ export const aggregateData = (data: DataPoint[], unit: TimeUnit) => {
       average_rating: (data) =>
         data.review_count_change > 0
           ? Math.round(
-              (data.weighted_rating_sum / data.review_count_change) * 10
+              (data.weighted_rating_sum / data.review_count_change) * 10,
             ) / 10
           : null,
-    })
+    }),
   ).sort((a, b) => a.date.localeCompare(b.date));
 };

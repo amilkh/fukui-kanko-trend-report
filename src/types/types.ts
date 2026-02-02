@@ -6,9 +6,20 @@ export type DataPoint = {
   call_clicks: number;
   website_clicks: number;
   total_reviews: number;
-  average_rating: number;
+  average_rating: number | null;
   review_count_change: number;
   location_count: number;
+};
+
+export type ChartDataItem = {
+  date: string;
+  map_views: number;
+  search_views: number;
+  directions: number;
+  call_clicks: number;
+  website_clicks: number;
+  review_count_change: number;
+  average_rating: number | null;
 };
 
 export type ChartMetric = {
