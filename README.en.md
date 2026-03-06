@@ -106,8 +106,9 @@ cd fukui-kanko-trend-report
 # nvm use 20.19.0
 # node -v
 
-# Install pnpm globally (if not already installed)
-npm install -g pnpm
+# Enable Corepack and use the pnpm version specified in package.json
+corepack enable
+corepack use pnpm@10.11.0
 
 # Initialize submodules and install dependencies
 git submodule update --init --recursive
@@ -117,7 +118,7 @@ pnpm install
 pnpm dev
 ```
 
-Your browser should automatically open to `http://localhost:5173`, or you can navigate there manually.
+After the development server starts, open the URL shown in your terminal (typically `http://localhost:5173`) in your browser.
 
 ### Updating Submodules (for Latest Data)
 
@@ -250,7 +251,7 @@ Data is automatically updated via GitHub Actions. The submodule containing CSV d
 | `pnpm build` | Build for production |
 | `pnpm preview` | Preview the production build |
 | `pnpm lint` | Run ESLint on the codebase |
-| `pnpm upload` | Deploy to GitHub Pages (requires permissions) |
+| `pnpm upload` | Deploy to AWS S3/CloudFront (requires stage name and AWS credentials) |
 
 ## Contributing
 
